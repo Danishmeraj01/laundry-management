@@ -1,0 +1,6 @@
+# docker-compose.yml (full version in Step 8)
+services:
+  frontend:   # React app on port 3000
+  backend:    # Express API on port 5000
+  postgres:   # PostgreSQL database
+  redis:      # Redis cache
