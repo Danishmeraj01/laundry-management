@@ -5,6 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "build": "echo 'No build step needed'",
     "dev": "nodemon server.js",
     "db:sync": "node -e \"require('./src/config/database').sequelize.sync({ force: true })\"",
     "db:migrate": "sequelize-cli db:migrate",
