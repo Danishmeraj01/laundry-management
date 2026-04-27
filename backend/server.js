@@ -33,16 +33,13 @@ const PORT = process.env.PORT || 5000;
 (async () => {
   try {
 
-    // ── 4. Connect to MySQL via Sequelize ───────────────────────────────────
-    await sequelize.authenticate();
-    logger.info('✅  MySQL connected successfully');
+    // ── 4. Connect to MySQL via Sequelize ───────────────────────────────────────
+await sequelize.authenticate();
+logger.info('✅  MySQL connected successfully');
 
-    // Sync models in development only.
-    // alter:true updates existing tables without dropping data
-    if (process.env.NODE_ENV === 'development') {
-      await sequelize.sync({ alter: true });
-      logger.info('✅  Database models synced (alter mode)');
-    }
+// Sync models — create tables if they don't exist
+await sequelize.sync({ alter: true });
+logger.info('✅  Database models synced');
 
     // ── 5. Connect to Redis (optional) ──────────────────────────────────────
     try {
