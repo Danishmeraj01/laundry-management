@@ -1,15 +1,3 @@
-/**
- * server.js — Entry Point
- *
- * Responsibilities:
- *  1. Load environment variables FIRST (before any other import uses them)
- *  2. Create the HTTP server from the Express app
- *  3. Attach Socket.io to the same HTTP server
- *  4. Connect to MySQL via Sequelize
- *  5. Connect to Redis (optional)
- *  6. Start listening on the configured port
- */
-
 'use strict';
 
 // ── 1. Environment variables must be loaded before anything else ─────────────
@@ -24,22 +12,25 @@ const { connectRedis } = require('./src/config/redis');
 const { initSocket }   = require('./src/services/socket.service');
 const logger           = require('./src/utils/logger');
 
-// ── 2. Validate all required env vars before touching any service ─────────────
+// ── 2. Validate all required env vars ────────────────────────────────────────
 validateEnv();
 
 const PORT = process.env.PORT || 5000;
 
-// ── 3. Wrap startup in an async IIFE so we can use await cleanly ──────────────
+// ── 3. Startup ────────────────────────────────────────────────────────────────
 (async () => {
   try {
 
-    // ── 4. Connect to MySQL via Sequelize ───────────────────────────────────────
-await sequelize.authenticate();
-logger.info('✅  MySQL connected successfully');
+    // ── 4. Connect to MySQL ─────────────────────────────────────────────────
+    await sequelize.authenticate();
+    logger.info('✅  MySQL connected successfully');
 
-// Sync models — create tables if they don't exist
-await sequelize.sync({ alter: true });
-logger.info('✅  Database models synced');
+    // Load all models so Sequelize knows about them before sync
+    require('./src/models/index');
+
+    // Always sync — creates tables if they don't exist
+    await sequelize.sync({ alter: true });
+    logger.info('✅  Database models synced');
 
     // ── 5. Connect to Redis (optional) ──────────────────────────────────────
     try {
@@ -60,16 +51,7 @@ logger.info('✅  Database models synced');
       logger.info(`📡  API base URL: http://localhost:${PORT}/api`);
     });
 
-    // ── 8. Serve React frontend in production ───────────────────────────────
-    if (process.env.NODE_ENV === 'production') {
-      const path = require('path');
-      app.use(require('express').static(path.join(__dirname, '../frontend/dist')));
-      app.get('*', (req, res) => {
-        res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
-      });
-    }
-
-    // ── 9. Graceful shutdown handlers ────────────────────────────────────────
+    // ── 8. Graceful shutdown ─────────────────────────────────────────────────
     const shutdown = async (signal) => {
       logger.info(`\n${signal} received — shutting down gracefully…`);
       httpServer.close(async () => {
