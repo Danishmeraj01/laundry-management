@@ -1,110 +1,94 @@
 /**
  * app.js — Express Application Factory
- *
- * This file creates and configures the Express app.
- * It is kept separate from server.js so the app can be imported
- * in tests without starting an HTTP server.
- *
- * Middleware order matters:
- *  security → parsing → logging → routes → error handling
  */
 
 'use strict';
 
-const express      = require('express');
-const cors         = require('cors');
-const helmet       = require('helmet');
-const morgan       = require('morgan');
-const compression  = require('compression');
-const rateLimit    = require('express-rate-limit');
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const compression = require('compression');
+const rateLimit = require('express-rate-limit');
 
-const routes       = require('./routes/index');
+const routes = require('./routes/index');
 const errorMiddleware = require('./middleware/error.middleware');
-const logger       = require('./utils/logger');
+const logger = require('./utils/logger');
 
 const app = express();
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 1. SECURITY HEADERS — Helmet sets a suite of HTTP headers that protect
-//    against well-known web vulnerabilities (XSS, clickjacking, MIME-sniffing).
-// ─────────────────────────────────────────────────────────────────────────────
+// Security headers
 app.use(helmet());
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 2. CORS — Allow the React frontend (and Postman in dev) to talk to this API.
-//    In production, restrict origin to your actual frontend domain.
-// ─────────────────────────────────────────────────────────────────────────────
-const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000')
+// CORS FIX
+const allowedOrigins = (
+  process.env.ALLOWED_ORIGINS ||
+  'http://localhost:5173,https://laundry-frontend-liart.vercel.app'
+)
   .split(',')
-  .map(o => o.trim());
+  .map((origin) => origin.trim());
 
-app.use(cors({
+const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (Postman, mobile apps, server-to-server)
     if (!origin) return callback(null, true);
 
     if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error(`CORS policy: origin ${origin} is not allowed`));
+      return callback(null, true);
     }
+
+    return callback(new Error(`CORS blocked for origin: ${origin}`));
   },
-  credentials: true,                 // allow cookies / Authorization header
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-}));
+};
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 3. RATE LIMITING — Protect against brute-force and DoS attacks.
-//    The auth limiter is stricter; the global one is more lenient.
-// ─────────────────────────────────────────────────────────────────────────────
+app.use(cors(corsOptions));
+app.options(/.*/, cors(corsOptions));
+
+// Rate limiting
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,   // 15 minutes
-  max: 200,                    // requests per window per IP
+  windowMs: 15 * 60 * 1000,
+  max: 200,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { success: false, message: 'Too many requests, please try again later.' },
+  message: {
+    success: false,
+    message: 'Too many requests, please try again later.',
+  },
 });
 
-// Tighter limit for authentication routes
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
-  message: { success: false, message: 'Too many login attempts, please try again in 15 minutes.' },
+  message: {
+    success: false,
+    message: 'Too many login attempts, please try again in 15 minutes.',
+  },
 });
 
 app.use('/api/', globalLimiter);
-app.use('/api/auth/', authLimiter);  // applied again specifically for auth
+app.use('/api/auth/', authLimiter);
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 4. BODY PARSING — Parse JSON and URL-encoded bodies.
-//    Limits prevent large payload attacks.
-// ─────────────────────────────────────────────────────────────────────────────
+// Body parsing
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 5. COMPRESSION — Gzip responses to reduce payload size.
-// ─────────────────────────────────────────────────────────────────────────────
+// Compression
 app.use(compression());
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 6. REQUEST LOGGING — Morgan logs every HTTP request.
-//    In development: colorful "dev" format.
-//    In production:  structured "combined" format piped to Winston.
-// ─────────────────────────────────────────────────────────────────────────────
+// Logging
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 } else {
-  app.use(morgan('combined', {
-    stream: { write: (msg) => logger.http(msg.trim()) },
-  }));
+  app.use(
+    morgan('combined', {
+      stream: { write: (msg) => logger.http(msg.trim()) },
+    })
+  );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 7. HEALTH CHECK — A simple endpoint so Docker/Render can verify the app is up.
-//    Does NOT go through the rate limiter.
-// ─────────────────────────────────────────────────────────────────────────────
+// Health check
 app.get('/health', (req, res) => {
   res.status(200).json({
     success: true,
@@ -114,14 +98,10 @@ app.get('/health', (req, res) => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 8. API ROUTES — All business routes are mounted under /api
-// ─────────────────────────────────────────────────────────────────────────────
+// API routes
 app.use('/api', routes);
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 9. 404 HANDLER — Catch any requests that didn't match a route above
-// ─────────────────────────────────────────────────────────────────────────────
+// 404 handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -129,9 +109,7 @@ app.use((req, res) => {
   });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// 10. GLOBAL ERROR HANDLER — Must be LAST and have 4 parameters (err, req, res, next)
-// ─────────────────────────────────────────────────────────────────────────────
+// Global error handler
 app.use(errorMiddleware);
 
 module.exports = app;
