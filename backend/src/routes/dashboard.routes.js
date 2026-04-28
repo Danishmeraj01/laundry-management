@@ -1,8 +1,9 @@
 'use strict';
 
-const express    = require('express');
-const router     = express.Router();
-const auth       = require('../middleware/auth.middleware');
+const express = require('express');
+const router = express.Router();
+
+const auth = require('../middleware/auth.middleware');
 const { getStats } = require('../controllers/dashboard.controller');
 
 router.get('/stats', auth, getStats);

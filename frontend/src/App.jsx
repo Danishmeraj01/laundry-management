@@ -12,6 +12,7 @@ import CreateOrderPage from './pages/CreateOrderPage';
 import OrderDetailPage from './pages/OrderDetailPage';
 import PricingPage     from './pages/PricingPage';
 import ReceiptPage     from './pages/ReceiptPage';
+import UsersPage       from './pages/UsersPage';
 
 const Layout = ({ children }) => (
   <div style={{ display: 'flex', minHeight: '100vh', background: '#f1f5f9' }}>
@@ -24,6 +25,7 @@ const Layout = ({ children }) => (
 
 const AppRoutes = () => {
   const { isAuthenticated } = useAuth();
+
   return (
     <Routes>
       <Route path="/login"  element={isAuthenticated ? <Navigate to="/" /> : <LoginPage />} />
@@ -35,6 +37,8 @@ const AppRoutes = () => {
       <Route path="/orders/:id" element={<ProtectedRoute><Layout><OrderDetailPage /></Layout></ProtectedRoute>} />
       <Route path="/orders/:id/receipt" element={<ProtectedRoute><ReceiptPage /></ProtectedRoute>} />
       <Route path="/pricing" element={<ProtectedRoute><Layout><PricingPage /></Layout></ProtectedRoute>} />
+
+      <Route path="/users" element={<ProtectedRoute><Layout><UsersPage /></Layout></ProtectedRoute>} />
 
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>

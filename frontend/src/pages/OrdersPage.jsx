@@ -2,17 +2,23 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getOrdersApi, updateStatusApi, deleteOrderApi } from '../api/order.api';
 import Navbar from '../components/layout/Navbar';
-import StatusBadge from '../components/orders/StatusBadge';
 import toast from 'react-hot-toast';
 import { Trash2, Eye, PlusCircle } from 'lucide-react';
 
 const STATUSES = ['RECEIVED', 'PROCESSING', 'READY', 'DELIVERED'];
 
 const OrdersPage = () => {
-  const [orders,  setOrders]  = useState([]);
+  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search,  setSearch]  = useState('');
+  const [search, setSearch] = useState('');
+  const [user, setUser] = useState(null);
+
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const storedUser = JSON.parse(localStorage.getItem('user'));
+    setUser(storedUser);
+  }, []);
 
   const fetchOrders = () => {
     getOrdersApi()
@@ -48,6 +54,8 @@ const OrdersPage = () => {
     o.customer_name.toLowerCase().includes(search.toLowerCase()) ||
     o.customer_phone.includes(search)
   );
+
+  const isCustomer = user?.role === 'customer';
 
   return (
     <div>
@@ -97,23 +105,39 @@ const OrdersPage = () => {
                     <td style={td}>{order.customer_phone}</td>
                     <td style={td}>{order.items?.length || 0} item(s)</td>
                     <td style={td}>₹{order.total_amount}</td>
+
+                    {/* STATUS */}
                     <td style={td}>
-                      <select
-                        value={order.status}
-                        onChange={e => handleStatusChange(order.id, e.target.value)}
-                        style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '13px' }}
-                      >
-                        {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
+                      {isCustomer ? (
+                        <span>{order.status}</span>
+                      ) : (
+                        <select
+                          value={order.status}
+                          onChange={e => handleStatusChange(order.id, e.target.value)}
+                          style={{ padding: '4px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', fontSize: '13px' }}
+                        >
+                          {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                      )}
                     </td>
+
+                    {/* ACTIONS */}
                     <td style={td}>
                       <div style={{ display: 'flex', gap: '8px' }}>
                         <button onClick={() => navigate(`/orders/${order.id}`)}
-                          style={{ ...iconBtn, color: '#3b82f6' }}><Eye size={16} /></button>
-                        <button onClick={() => handleDelete(order.id)}
-                          style={{ ...iconBtn, color: '#ef4444' }}><Trash2 size={16} /></button>
+                          style={{ ...iconBtn, color: '#3b82f6' }}>
+                          <Eye size={16} />
+                        </button>
+
+                        {!isCustomer && (
+                          <button onClick={() => handleDelete(order.id)}
+                            style={{ ...iconBtn, color: '#ef4444' }}>
+                            <Trash2 size={16} />
+                          </button>
+                        )}
                       </div>
                     </td>
+
                   </tr>
                 ))}
               </tbody>

@@ -19,6 +19,12 @@ const signup = async (req, res) => {
     const hashed = await bcrypt.hash(password, 12);
     const user   = await User.create({ name, email, password: hashed, role: role || 'staff' });
 
+    console.log("TOKEN PAYLOAD:", {
+  id: user.id,
+  email: user.email,
+  role: user.role
+});
+
     const token = signToken({ id: user.id, email: user.email, role: user.role });
 
     return success(res, {

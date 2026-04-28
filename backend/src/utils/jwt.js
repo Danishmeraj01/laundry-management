@@ -1,10 +1,12 @@
 'use strict';
 
-const jwt    = require('jsonwebtoken');
+const jwt = require('jsonwebtoken');
 const { config } = require('../config/env');
 
 const signToken = (payload) => {
-  return jwt.sign(payload, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
+  return jwt.sign(payload, config.jwt.secret, {
+    expiresIn: config.jwt.expiresIn,
+  });
 };
 
 const verifyToken = (token) => {

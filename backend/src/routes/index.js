@@ -6,10 +6,12 @@ const router    = express.Router();
 const authRoutes      = require('./auth.routes');
 const orderRoutes     = require('./order.routes');
 const dashboardRoutes = require('./dashboard.routes');
+const userRoutes = require('./user.routes');
 
 router.use('/auth',      authRoutes);
 router.use('/orders',    orderRoutes);
 router.use('/dashboard', dashboardRoutes);
+router.use('/users', userRoutes);
 
 router.get('/', (req, res) => {
   res.json({ success: true, message: 'Laundry Management API v1.0' });
